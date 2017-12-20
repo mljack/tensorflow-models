@@ -1,0 +1,236 @@
+https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/installation.md
+	protoc-3.5.0-win32\bin\protoc.exe
+
+E:\_workspace\_ML-projects\04_object_detection\models\research>set.bat
+
+E:\_workspace\_ML-projects\04_object_detection\models\research>python object_det
+ection\builders\model_builder_test.py
+...........
+----------------------------------------------------------------------
+Ran 11 tests in 0.136s
+
+OK
+
+
+
+# From tensorflow/models/research/object_detection
+jupyter notebook
+```
+
+object_detection_tutorial.ipynb
+
+
+convert images/labels/bboxes into tfrecord files
+	https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/using_your_own_dataset.md
+	models\research\object_detection\dataset_tools\create_gta_tf_record.py
+
+python dataset_tools/create_gta_tf_record.py --data_dir=gta-10k --year=VOC2012 --label_map_path=gta-10k/gta_label_map.pbtxt --set=train --output_path=train_output1.record
+python dataset_tools/create_gta_tf_record.py --data_dir=gta-10k --year=VOC2012 --label_map_path=gta-10k/gta_label_map.pbtxt --set=trainval --output_path=trainval_output1.record
+python dataset_tools/create_gta_tf_record.py --data_dir=gta-10k --year=VOC2012 --label_map_path=gta-10k/gta_label_map.pbtxt --set=val --output_path=val_output1.record
+	see convert.bat
+
+https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/configuring_jobs.md
+	models\research\object_detection\samples\configs\ssd_mobilenet_v1_coco.config
+
+
+==================================================================================================================
+
+python train.py --logtostderr --pipeline_config_path=gta-10k/ssd_mobilenet_v1_coco_2017_11_17/ssd_mobilenet_v1_coco.config --train_dir=gta-10k/ssd_mobilenet_v1_coco_2017_11_17/train
+
+
+\PY\36\tensorflow\core\framework\op_kernel.cc:1192] Not found: Key FeatureExtractor/MobilenetV1/Conv2d_9_depthwise/depthwise_weights/ExponentialMovingAverage no t found in checkpoint
+
+https://github.com/tensorflow/models/issues/1836
+
+@groakat @is03wlei
+Make sure that the path --train_dir is initialized when you did your training.
+I had the same problem before, it was because in my --train_dir there was an checkpoint file of a different model, so when you run with the current model, this wrong checkpoint file will be searched and used instead .
+@chenyuZha
+How to initialize --train_dir?
+ 
+chenyuZha commented on Jul 10
+@is03wlei just remove the old checkpoints in the folder or you indicate a new path of --train_dir.
+
+
+
+
+==================================================================================================================
+
+WORKING
+
+
+python train.py --logtostderr --pipeline_config_path=gta-10k/ssd_inception_v2_coco_2017_11_17/ssd_inception_v2_coco.config --train_dir=gta-10k\ssd_inception_v2_coco_2017_11_17\train
+
+8G memory used then it complains out of memory
+	but it has much more...
+		https://superuser.com/questions/943175/windows-says-ram-ran-out-while-there-is-still-4-gb-of-physical-memory-available
+		https://answers.microsoft.com/en-us/windows/forum/windows_7-performance/why-do-i-keep-getting-low-memory-warnings-when-i/c562b97b-6105-42cb-aa83-4627a55c7309?auth=1
+		normally you will see out of memory errors when your virtual memory runs out. normally because its been turned off or set to low.
+			then it works fine.
+INFO:tensorflow:global step 200: loss = 6.0752 (2.215 sec/step)
+	cpu usage is quite high
+	gpu 20-30 TDP, spike usage
+
+INFO:tensorflow:global step 708: loss = 4.8586 (2.683 sec/step)
+INFO:tensorflow:global step 709: loss = 4.5449 (2.186 sec/step)
+	batch_size: 24
+
+python eval.py --logtostderr --pipeline_config_path=gta-10k/ssd_inception_v2_coco_2017_11_17/ssd_inception_v2_coco.config --checkpoint_dir=gta-10k\ssd_inception_v2_coco_2017_11_17\train --eval_dir=gta-10k\ssd_inception_v2_coco_2017_11_17\eval
+
+
+WARNING:root:The following classes have no ground truth examples: 2
+E:\_workspace\_ML-projects\04_object_detection\models\research\object_detection\utils\metrics.py:144: RuntimeWarning: invalid value encountered in true_divide
+  num_images_correctly_detected_per_class / num_gt_imgs_per_class)
+	https://github.com/tensorflow/models/issues/1936
+	https://github.com/tensorflow/models/issues/1772
+		you should add eval_config.max_evals value. For example, my eval config.max_evals is 1.
+
+eval_config: {
+  num_examples: 1000
+  # Note: The below line limits the evaluation process to 10 evaluations.
+  # Remove the below line to evaluate indefinitely.
+  max_evals: 1
+}
+
+@tlsgb456 this works!
+
+but I still have this one:
+
+WARNING:root:The following classes have no ground truth examples: 0
+/home/liliangqi/google_research/models/object_detection/utils/metrics.py:144: RuntimeWarning: invalid value encountered in true_divide
+num_images_correctly_detected_per_class / num_gt_imgs_per_class)
+
+@tlsgb456 @chakpongchung That warning occured because there is no example of the class 0 in your evaluation set. Usually the class 0 is 'none of above' which you can check in your label_map.pbtxt, so there's nothing to worry about.
+
+
+accurcy:	test		training
+710		0.2672
+5614		0.3696		0.3873
+
+
+tensorboard --logdir=gta-10k\ssd_inception_v2_coco_2017_11_17\train
+tensorboard --logdir=gta-10k\ssd_inception_v2_coco_2017_11_17\eval
+
+
+python export_inference_graph.py --input_type image_tensor --pipeline_config_path gta-10k/ssd_inception_v2_coco_2017_11_17/pipeline.config --trained_checkpoint_prefix gta-10k/ssd_inception_v2_coco_2017_11_17/train/model.ckpt --output_directory my_output_inference_graph.pb
+
+
+==================================================================================================================
+python train.py --logtostderr --pipeline_config_path=gta-10k/faster_rcnn_resnet101_kitti_2017_11_08/my.config --train_dir=gta-10k\faster_rcnn_resnet101_kitti_2017_11_08\train
+
+
+2017-12-15 01:21:51.448280: W C:\tf_jenkins\home\workspace\rel-win\M\windows-gpu
+\PY\36\tensorflow\core\util\tensor_slice_reader.cc:95] Could not open gta-10k\fa
+ster_rcnn_resnet101_kitti_2017_11_08\model.ckpt.data-00000-of-00001: Data loss:
+not an sstable (bad magic number): perhaps your file is in a different file form
+at and you need to use a different restore operator?
+
+	wrong model name
+	change
+  fine_tune_checkpoint: "gta-10k/faster_rcnn_resnet101_kitti_2017_11_08/model.ckpt.data-00000-of-00001"
+	to
+  fine_tune_checkpoint: "gta-10k/faster_rcnn_resnet101_kitti_2017_11_08/model.ckpt"
+	in config
+
+
+tensorboard --logdir=gta-10k\faster_rcnn_resnet101_kitti_2017_11_08\train
+
+python export_inference_graph.py --input_type image_tensor --pipeline_config_path gta-10k/faster_rcnn_resnet101_kitti_2017_11_08/my.config --trained_checkpoint_prefix gta-10k/faster_rcnn_resnet101_kitti_2017_11_08/train/model.ckpt --output_directory my_output_inference_graph.pb
+
+
+python eval.py --logtostderr --pipeline_config_path=gta-10k/faster_rcnn_resnet101_kitti_2017_11_08/my.config --checkpoint_dir=gta-10k\faster_rcnn_resnet101_kitti_2017_11_08\train --eval_dir=gta-10k\faster_rcnn_resnet101_kitti_2017_11_08\eval
+
+
+
+
+eval_config {
+  num_examples: 1000
+  # metrics_set: "coco_metrics"
+  # use_moving_averages: false
+  max_evals: 1
+
+}
+
+accurcy:	test		training
+17469		0.6318
+
+==================================================================================================================
+
+
+VGG16 SSD tf 10 classes
+
+
+
+
+
+python object_detection/eval.py --logtostderr --pipeline_config_path=ssd_mobilenet_v1_coco.config --checkpoint_dir=. --eval_dir=eval
+
+
+
+
+
+
+
+INFO:tensorflow:Error reported to Coordinator: <class 'tensorflow.python.framewo
+rk.errors_impl.ResourceExhaustedError'>, OOM when allocating tensor with shape[2
+4,1,1052,1914,3]
+         [[Node: batch = QueueDequeueManyV2[component_types=[DT_STRING, DT_INT32
+, DT_FLOAT, DT_INT32, DT_FLOAT, DT_INT32, DT_INT64, DT_INT32, DT_INT64, DT_INT32
+, DT_INT64, DT_INT32, DT_BOOL, DT_INT32, DT_FLOAT, DT_INT32, DT_STRING, DT_INT32
+, DT_STRING, DT_INT32], timeout_ms=-1, _device="/job:localhost/replica:0/task:0/
+device:CPU:0"](batch/padding_fifo_queue, batch/n)]]
+INFO:tensorflow:global step 2436: loss = 4.3004 (2.204 sec/step)
+INFO:tensorflow:Finished training! Saving model to disk.
+Traceback (most recent call last):
+  File "train.py", line 163, in <module>
+    tf.app.run()
+  File "C:\Python36\lib\site-packages\tensorflow\python\platform\app.py", line 4
+8, in run
+    _sys.exit(main(_sys.argv[:1] + flags_passthrough))
+  File "train.py", line 159, in main
+    worker_job_name, is_chief, FLAGS.train_dir)
+  File "E:\_workspace\_ML-projects\04_object_detection\models\research\object_de
+tection\trainer.py", line 332, in train
+    saver=saver)
+  File "C:\Python36\lib\site-packages\tensorflow\contrib\slim\python\slim\learni
+ng.py", line 775, in train
+    sv.stop(threads, close_summary_writer=True)
+  File "C:\Python36\lib\site-packages\tensorflow\python\training\supervisor.py",
+ line 792, in stop
+    stop_grace_period_secs=self._stop_grace_secs)
+  File "C:\Python36\lib\site-packages\tensorflow\python\training\coordinator.py"
+, line 389, in join
+    six.reraise(*self._exc_info_to_raise)
+  File "C:\Python36\lib\site-packages\six.py", line 693, in reraise
+    raise value
+  File "C:\Python36\lib\site-packages\tensorflow\python\training\queue_runner_im
+pl.py", line 238, in _run
+    enqueue_callable()
+  File "C:\Python36\lib\site-packages\tensorflow\python\client\session.py", line
+ 1231, in _single_operation_run
+    target_list_as_strings, status, None)
+  File "C:\Python36\lib\site-packages\tensorflow\python\framework\errors_impl.py
+", line 473, in __exit__
+    c_api.TF_GetCode(self.status.status))
+tensorflow.python.framework.errors_impl.ResourceExhaustedError: OOM when allocat
+ing tensor with shape[24,1,1052,1914,3]
+         [[Node: batch = QueueDequeueManyV2[component_types=[DT_STRING, DT_INT32
+, DT_FLOAT, DT_INT32, DT_FLOAT, DT_INT32, DT_INT64, DT_INT32, DT_INT64, DT_INT32
+, DT_INT64, DT_INT32, DT_BOOL, DT_INT32, DT_FLOAT, DT_INT32, DT_STRING, DT_INT32
+, DT_STRING, DT_INT32], timeout_ms=-1, _device="/job:localhost/replica:0/task:0/
+device:CPU:0"](batch/padding_fifo_queue, batch/n)]]
+
+
+jupyter notebook --NotebookApp.iopub_data_rate_limit=10000000000
+
+
+check is_object_detection flag in model config
+	and initial model detetion results.
+
+    "# Path to frozen detection graph. This is the actual model that is used for the object detection.\n",
+    "PATH_TO_CKPT = 'gta-10k/' + MODEL_NAME + '/frozen_inference_graph.pb'\n",
+
+
+try my trained model...
+
+https://towardsdatascience.com/building-a-toy-detector-with-tensorflow-object-detection-api-63c0fdf2ac95
