@@ -124,8 +124,8 @@ def dict_to_tf_example(name,
     truncated.append(int(obj['truncated']))
     poses.append(obj['pose'].encode('utf8'))
     
-    print(obj['name'].encode('utf8'))
-    print(label_map_dict[obj['name']])
+    #print(obj['name'].encode('utf8'))
+    #print(label_map_dict[obj['name']])
 
   example = tf.train.Example(features=tf.train.Features(feature={
       'image/height': dataset_util.int64_feature(height),
