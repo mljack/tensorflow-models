@@ -369,9 +369,9 @@ def repeated_checkpoint_run(tensor_dict,
     start = time.time()
     tf.logging.set_verbosity(tf.logging.INFO)
     print("============== "+'Starting evaluation at ' + time.strftime(
-        '%Y-%m-%d-%H:%M:%S', time.gmtime()))
+        '%Y-%m-%d-%H:%M:%S', time.localtime()))
     logging.info('Starting evaluation at ' + time.strftime(
-        '%Y-%m-%d-%H:%M:%S', time.gmtime()))
+        '%Y-%m-%d-%H:%M:%S', time.localtime()))
     model_path = tf.train.latest_checkpoint(checkpoint_dirs[0])
     if not model_path:
       logging.info('No model found in %s. Will try again in %d seconds',
