@@ -151,7 +151,7 @@ def visualize_detection_results(result_dict,
       agnostic_mode=agnostic_mode)
 
   if export_dir:
-    export_path = os.path.join(export_dir, 'export-{}.png'.format(tag))
+    export_path = os.path.join(export_dir, 'export-{0}-{1:09d}.png'.format(tag, global_step))
     vis_utils.save_image_array_as_png(image, export_path)
 
   summary = tf.Summary(value=[
@@ -368,7 +368,7 @@ def repeated_checkpoint_run(tensor_dict,
   while True:
     start = time.time()
     tf.logging.set_verbosity(tf.logging.INFO)
-    print("============== "+str(eval_interval_secs)+' Starting evaluation at ' + time.strftime(
+    print("============== "+'Starting evaluation at ' + time.strftime(
         '%Y-%m-%d-%H:%M:%S', time.gmtime()))
     logging.info('Starting evaluation at ' + time.strftime(
         '%Y-%m-%d-%H:%M:%S', time.gmtime()))
@@ -399,6 +399,7 @@ def repeated_checkpoint_run(tensor_dict,
       break
     time_to_next_eval = start + eval_interval_secs - time.time()
     if time_to_next_eval > 0:
+      print("============== Sleep "+str(int(time_to_next_eval+0.5))+"s")
       time.sleep(time_to_next_eval)
 
   return metrics
