@@ -228,7 +228,13 @@ def _run_checkpoint_once(tensor_dict,
   """
   if save_graph and not save_graph_dir:
     raise ValueError('`save_graph_dir` must be defined.')
-  sess = tf.Session(master, graph=tf.get_default_graph())
+
+  # changed by mljack
+  sess_config = tf.ConfigProto()
+  sess_config.gpu_options.allow_growth = True
+  sess = tf.Session(master, graph=tf.get_default_graph(), config=sess_config)
+  
+  #sess = tf.Session(master, graph=tf.get_default_graph())
   sess.run(tf.global_variables_initializer())
   sess.run(tf.local_variables_initializer())
   sess.run(tf.tables_initializer())
@@ -361,6 +367,9 @@ def repeated_checkpoint_run(tensor_dict,
   number_of_evaluations = 0
   while True:
     start = time.time()
+    tf.logging.set_verbosity(tf.logging.INFO)
+    print("============== "+str(eval_interval_secs)+' Starting evaluation at ' + time.strftime(
+        '%Y-%m-%d-%H:%M:%S', time.gmtime()))
     logging.info('Starting evaluation at ' + time.strftime(
         '%Y-%m-%d-%H:%M:%S', time.gmtime()))
     model_path = tf.train.latest_checkpoint(checkpoint_dirs[0])
@@ -370,7 +379,9 @@ def repeated_checkpoint_run(tensor_dict,
     elif model_path == last_evaluated_model_path:
       logging.info('Found already evaluated checkpoint. Will try again in %d '
                    'seconds', eval_interval_secs)
+      print("============== "+'Found already evaluated checkpoint. Will try again in '+str(eval_interval_secs)+' seconds', )
     else:
+      print("============== "+'Found new checkpoint.' + model_path)
       last_evaluated_model_path = model_path
       global_step, metrics = _run_checkpoint_once(tensor_dict, evaluators,
                                                   batch_processor,
