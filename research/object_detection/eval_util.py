@@ -177,7 +177,8 @@ def _run_checkpoint_once(tensor_dict,
                          num_batches=1,
                          master='',
                          save_graph=False,
-                         save_graph_dir=''):
+                         save_graph_dir='',
+                         model_path=None):
   """Evaluates metrics defined in evaluators.
 
   This function loads the latest checkpoint in checkpoint_dirs and evaluates
@@ -238,7 +239,10 @@ def _run_checkpoint_once(tensor_dict,
   sess.run(tf.global_variables_initializer())
   sess.run(tf.local_variables_initializer())
   sess.run(tf.tables_initializer())
-  if restore_fn:
+  if model_path:
+    saver = tf.train.Saver(variables_to_restore)
+    saver.restore(sess, model_path)
+  elif restore_fn:
     restore_fn(sess)
   else:
     if not checkpoint_dirs:
@@ -365,6 +369,28 @@ def repeated_checkpoint_run(tensor_dict,
 
   last_evaluated_model_path = None
   number_of_evaluations = 0
+  
+  def get_checkpoint_list(path):
+    list = []
+    p = os.path.join(path, "checkpoint")
+    if os.path.isfile(p):
+        with open(p, "r") as f:
+            lines = f.readlines()
+            if len(lines) > 0:
+                list = lines[1:]
+                for i,line in enumerate(list):
+                    list[i] = line.replace('all_model_checkpoint_paths: "', '').replace('"\n', '')
+            f.close()
+    return list
+  def get_last_evaluated_checkpoint(path):
+    s = None
+    p = os.path.join(path, "checkpoint-evaluated")
+    if os.path.isfile(p):
+        with open(p, "r") as f:
+            s = f.readlines()[-1].replace("\n", "")
+            f.close()
+    return s
+
   while True:
     start = time.time()
     tf.logging.set_verbosity(tf.logging.INFO)
@@ -372,8 +398,23 @@ def repeated_checkpoint_run(tensor_dict,
         '%Y-%m-%d-%H:%M:%S', time.localtime()))
     logging.info('Starting evaluation at ' + time.strftime(
         '%Y-%m-%d-%H:%M:%S', time.localtime()))
-    model_path = tf.train.latest_checkpoint(checkpoint_dirs[0])
+    #model_path = tf.train.latest_checkpoint(checkpoint_dirs[0])
+    list = get_checkpoint_list(checkpoint_dirs[0])
+    last_evaluated = get_last_evaluated_checkpoint(checkpoint_dirs[0])
+    model_path = None
+    if (len(list) > 0):
+        to_evaluate = list[0]
+        model_path = os.path.join(checkpoint_dirs[0], list[0])
+    for i,item in enumerate(list):
+        if item == last_evaluated:
+            if i+1 != len(list):
+                model_path = os.path.join(checkpoint_dirs[0], list[i+1])
+                to_evaluate = list[i+1]
+            else:
+                model_path = os.path.join(checkpoint_dirs[0], last_evaluated)
+    print(model_path)
     if not model_path:
+      print("============== "+'No model found. Will try again in '+str(eval_interval_secs)+' seconds', )
       logging.info('No model found in %s. Will try again in %d seconds',
                    checkpoint_dirs[0], eval_interval_secs)
     elif model_path == last_evaluated_model_path:
@@ -383,14 +424,20 @@ def repeated_checkpoint_run(tensor_dict,
     else:
       print("============== "+'Found new checkpoint.' + model_path)
       last_evaluated_model_path = model_path
+
       global_step, metrics = _run_checkpoint_once(tensor_dict, evaluators,
                                                   batch_processor,
                                                   checkpoint_dirs,
                                                   variables_to_restore,
                                                   restore_fn, num_batches,
                                                   master, save_graph,
-                                                  save_graph_dir)
+                                                  save_graph_dir, model_path)
       write_metrics(metrics, global_step, summary_dir)
+      
+      with open(os.path.join(checkpoint_dirs[0], "checkpoint-evaluated"), "a") as f:
+        f.write(to_evaluate+"\n")
+        f.close()
+        
     number_of_evaluations += 1
 
     if (max_number_of_evaluations and
