@@ -391,6 +391,16 @@ def repeated_checkpoint_run(tensor_dict,
             f.close()
     return s
 
+  def get_checkpoint_step(path):
+    s = 1
+    p = os.path.join(path, "checkpoint-step")
+    if os.path.isfile(p):
+        with open(p, "r") as f:
+            s = int(f.readlines()[0].replace("\n", ""))
+            f.close()
+    return s
+
+  every_n_checkpoint = get_checkpoint_step(summary_dir);
   while True:
     start = time.time()
     tf.logging.set_verbosity(tf.logging.INFO)
@@ -400,19 +410,24 @@ def repeated_checkpoint_run(tensor_dict,
         '%Y-%m-%d-%H:%M:%S', time.localtime()))
     #model_path = tf.train.latest_checkpoint(checkpoint_dirs[0])
     list = get_checkpoint_list(checkpoint_dirs[0])
-    last_evaluated = get_last_evaluated_checkpoint(checkpoint_dirs[0])
+    last_evaluated = get_last_evaluated_checkpoint(summary_dir)
     model_path = None
     if (len(list) > 0):
         to_evaluate = list[0]
         model_path = os.path.join(checkpoint_dirs[0], list[0])
     for i,item in enumerate(list):
         if item == last_evaluated:
-            if i+1 != len(list):
-                model_path = os.path.join(checkpoint_dirs[0], list[i+1])
-                to_evaluate = list[i+1]
+            if i+every_n_checkpoint < len(list):
+                model_path = os.path.join(checkpoint_dirs[0], list[i+every_n_checkpoint])
+                to_evaluate = list[i+every_n_checkpoint]
             else:
                 model_path = os.path.join(checkpoint_dirs[0], last_evaluated)
+                if last_evaluated_model_path is None:
+                    last_evaluated_model_path = model_path
     print(model_path)
+    #print(summary_dir)
+    #print(list)
+    #print(last_evaluated)
     if not model_path:
       print("============== "+'No model found. Will try again in '+str(eval_interval_secs)+' seconds', )
       logging.info('No model found in %s. Will try again in %d seconds',
@@ -434,7 +449,7 @@ def repeated_checkpoint_run(tensor_dict,
                                                   save_graph_dir, model_path)
       write_metrics(metrics, global_step, summary_dir)
       
-      with open(os.path.join(checkpoint_dirs[0], "checkpoint-evaluated"), "a") as f:
+      with open(os.path.join(summary_dir, "checkpoint-evaluated"), "a") as f:
         f.write(to_evaluate+"\n")
         f.close()
         
