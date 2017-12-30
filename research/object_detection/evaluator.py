@@ -108,7 +108,9 @@ def get_evaluators(eval_config, categories):
     raise ValueError('Metric not found: {}'.format(eval_metric_fn_key))
   return [
       EVAL_METRICS_CLASS_DICT[eval_metric_fn_key](
-          categories=categories)
+          categories=categories
+          , matching_iou_threshold=0.7 # changed by mljack
+          )
   ]
 
 
@@ -190,6 +192,7 @@ def evaluate(create_input_dict_fn, create_model_fn, eval_config, categories,
 
   def _restore_latest_checkpoint(sess):
     latest_checkpoint = tf.train.latest_checkpoint(checkpoint_dir)
+    print("=========== "+latest_checkpoint+" ============")
     saver.restore(sess, latest_checkpoint)
 
   metrics = eval_util.repeated_checkpoint_run(
