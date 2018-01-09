@@ -35,6 +35,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import random
 
 import hashlib
 import io
@@ -58,10 +59,10 @@ tf.app.flags.DEFINE_string('output_path', '', 'Path to which TFRecord files'
                            'will be located at: <output_path>_train.tfrecord.'
                            'And the TFRecord with the validation set will be'
                            'located at: <output_path>_val.tfrecord')
-tf.app.flags.DEFINE_list('classes_to_use', ['car', 'pedestrian', 'dontcare'],
-                         'Which classes of bounding boxes to use. Adding the'
-                         'dontcare class will remove all bboxs in the dontcare'
-                         'regions.')
+#tf.app.flags.DEFINE_list('classes_to_use', ['car', 'pedestrian', 'dontcare'],
+#                         'Which classes of bounding boxes to use. Adding the'
+#                         'dontcare class will remove all bboxs in the dontcare'
+#                         'regions.')
 tf.app.flags.DEFINE_string('label_map_path', 'data/kitti_label_map.pbtxt',
                            'Path to label map proto.')
 tf.app.flags.DEFINE_integer('validation_set_size', '500', 'Number of images to'
@@ -100,7 +101,6 @@ def convert_kitti_to_tfrecords(data_dir, output_path, classes_to_use,
                                 'label_2')
 
   image_dir = os.path.join(data_dir,
-                           'data_object_image_2',
                            'training',
                            'image_2')
 
@@ -110,6 +110,10 @@ def convert_kitti_to_tfrecords(data_dir, output_path, classes_to_use,
                                            output_path)
 
   images = sorted(tf.gfile.ListDirectory(image_dir))
+  
+  shuffle_seed = 7490742193
+  random.Random(shuffle_seed).shuffle(images)
+
   for img_name in images:
     img_num = int(img_name.split('.')[0])
     is_validation_img = img_num < validation_set_size
@@ -302,7 +306,7 @@ def main(_):
   convert_kitti_to_tfrecords(
       data_dir=FLAGS.data_dir,
       output_path=FLAGS.output_path,
-      classes_to_use=FLAGS.classes_to_use,
+      classes_to_use=['car', 'pedestrian', 'dontcare'], #FLAGS.classes_to_use,
       label_map_path=FLAGS.label_map_path,
       validation_set_size=FLAGS.validation_set_size)
 

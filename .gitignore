@@ -91,3 +91,7 @@ ENV/
 # PyCharm
 .idea/
 /research/object_detection/gta-10k
+/research/object_detection/gta
+/research/object_detection/_logs
+/research/object_detection/kitti
+/research/object_detection/protos/*_pb2.py

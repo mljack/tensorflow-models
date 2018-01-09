@@ -7,3 +7,8 @@ item {
   id: 2
   name: 'pedestrian'
 }
+
+item {
+  id: 3
+  name: 'motorbike'
+}

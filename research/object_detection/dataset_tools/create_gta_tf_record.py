@@ -158,7 +158,7 @@ def main(_):
   years = ['VOC2007', 'VOC2012']
   if FLAGS.year != 'merged':
     years = [FLAGS.year]
-
+  print(FLAGS.output_path)
   writer = tf.python_io.TFRecordWriter(FLAGS.output_path)
 
   label_map_dict = label_map_util.get_label_map_dict(FLAGS.label_map_path)
@@ -169,9 +169,15 @@ def main(_):
                                  'car_' + FLAGS.set + '.txt')
     annotations_dir = os.path.join(data_dir, year, FLAGS.annotations_dir)
     examples_list = dataset_util.read_examples_list(examples_path)
+    #examples_list = examples_list[:10000]
+    print(len(examples_list))
+    #exit(0)
+    count = 0
     for idx, example in enumerate(examples_list):
-      if idx % 100 == 0:
-        logging.info('On image %d of %d', idx, len(examples_list))
+      #if idx % 10 != 0:
+      #  continue
+      #  logging.info('On image %d of %d', idx, len(examples_list))
+      count += 1
       path = os.path.join(annotations_dir, example + '.xml')
       with tf.gfile.GFile(path, 'r') as fid:
         xml_str = fid.read()
@@ -181,7 +187,7 @@ def main(_):
       tf_example = dict_to_tf_example(example+".jpg", data, FLAGS.data_dir, label_map_dict,
                                       FLAGS.ignore_difficult_instances)
       writer.write(tf_example.SerializeToString())
-
+  print(count)
   writer.close()
 
 

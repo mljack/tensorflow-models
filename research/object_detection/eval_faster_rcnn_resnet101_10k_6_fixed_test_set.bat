@@ -1,0 +1,1 @@
+python eval.py --logtostderr --pipeline_config_path=gta/faster_rcnn_resnet101/test_set.config --checkpoint_dir=gta\faster_rcnn_resnet101\003_10k_exp\train_fixed_lrate --eval_dir=gta\faster_rcnn_resnet101\003_10k_exp\6_eval_test_set_fixed_lrate

@@ -392,7 +392,7 @@ def repeated_checkpoint_run(tensor_dict,
     return s
 
   def get_checkpoint_step(path):
-    s = 1
+    s = 2
     p = os.path.join(path, "checkpoint-step")
     if os.path.isfile(p):
         with open(p, "r") as f:
@@ -433,9 +433,10 @@ def repeated_checkpoint_run(tensor_dict,
       logging.info('No model found in %s. Will try again in %d seconds',
                    checkpoint_dirs[0], eval_interval_secs)
     elif model_path == last_evaluated_model_path:
-      logging.info('Found already evaluated checkpoint. Will try again in %d '
-                   'seconds', eval_interval_secs)
+      logging.info('Found already evaluated checkpoint. Will try again in %d seconds', eval_interval_secs)
       print("============== "+'Found already evaluated checkpoint. Will try again in '+str(eval_interval_secs)+' seconds', )
+      print("============== Done")
+      break
     else:
       print("============== "+'Found new checkpoint.' + model_path)
       last_evaluated_model_path = model_path

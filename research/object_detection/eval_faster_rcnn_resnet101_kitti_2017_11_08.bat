@@ -1,0 +1,1 @@
+python eval.py --logtostderr --pipeline_config_path=gta/faster_rcnn_resnet101_kitti_2017_11_08/my.config --checkpoint_dir=gta\faster_rcnn_resnet101_kitti_2017_11_08\train --eval_dir=gta\faster_rcnn_resnet101_kitti_2017_11_08\eval

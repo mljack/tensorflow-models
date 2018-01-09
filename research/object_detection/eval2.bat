@@ -1,0 +1,6 @@
+:loop
+call eval_faster_rcnn_resnet101_50k_4_fixed_training_set.bat
+call eval_faster_rcnn_resnet101_50k_5_fixed_training_dev_set.bat
+call eval_faster_rcnn_resnet101_50k_6_fixed_test_set.bat
+sleep 1000
+goto loop

@@ -1,5 +1,5 @@
-set pythonpath=%pythonpath%;E:\_workspace\_ML-projects\04_object_detection\models\research;E:\_workspace\_ML-projects\04_object_detection\models\research\slim
-set path=E:\_workspace\_ML-projects\04_object_detection\protoc-3.5.0-win32\bin;%path%
+set pythonpath=%pythonpath%;C:\_Liang\models\research;C:\_Liang\models\research\slim
+set path=C:\_Liang\protoc-3.5.0-win32\bin;%path%
 
 protoc --python_out=. object_detection\protos\anchor_generator.proto
 protoc --python_out=. object_detection\protos\argmax_matcher.proto

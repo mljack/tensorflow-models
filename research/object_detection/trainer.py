@@ -335,5 +335,6 @@ def train(create_tensor_dict_fn, create_model_fn, train_config, master, task,
         
         # changed by mljack
         save_interval_secs = 1800,
+        #trace_every_n_steps = 3,
         
         saver=saver)

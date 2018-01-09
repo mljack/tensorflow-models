@@ -1,0 +1,1 @@
+python eval.py --logtostderr --pipeline_config_path=gta/ssd_inception_v2_coco_2017_11_17/my.config --checkpoint_dir=gta\ssd_inception_v2_coco_2017_11_17\train --eval_dir=gta\ssd_inception_v2_coco_2017_11_17\eval
