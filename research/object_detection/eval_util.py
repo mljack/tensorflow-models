@@ -392,7 +392,7 @@ def repeated_checkpoint_run(tensor_dict,
     return s
 
   def get_checkpoint_step(path):
-    s = 2
+    s = 1
     p = os.path.join(path, "checkpoint-step")
     if os.path.isfile(p):
         with open(p, "r") as f:
