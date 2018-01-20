@@ -69,6 +69,22 @@ tf.app.flags.DEFINE_integer('validation_set_size', '500', 'Number of images to'
                             'be used as a validation set.')
 FLAGS = tf.app.flags.FLAGS
 
+'''
+# 
+python create_kitti_tf_record.py --data_dir=kitti
+    --output_path=kitti.record --label_map_path=../data/kitti_label_map.pbtxt
+
+item {
+  id: 1
+  name: 'car'
+}
+
+item {
+  id: 2
+  name: 'pedestrian'
+}    
+'''
+
 
 def convert_kitti_to_tfrecords(data_dir, output_path, classes_to_use,
                                label_map_path, validation_set_size):
@@ -114,9 +130,9 @@ def convert_kitti_to_tfrecords(data_dir, output_path, classes_to_use,
   shuffle_seed = 7490742193
   random.Random(shuffle_seed).shuffle(images)
 
-  for img_name in images:
+  for i,img_name in enumerate(images):
     img_num = int(img_name.split('.')[0])
-    is_validation_img = img_num < validation_set_size
+    is_validation_img = i < validation_set_size
     img_anno = read_annotation_file(os.path.join(annotation_dir,
                                                  str(img_num).zfill(6)+'.txt'))
 
@@ -169,12 +185,20 @@ def prepare_example(image_path, annotations, label_map_dict):
 
   difficult_obj = [0]*len(xmin_norm)
 
+  # merge all vehicle types into the type 'car'. By mljack
+  types = annotations['type']
+  #print(types)
+  for i,t in enumerate(types):
+    if t in ['car', 'van', 'truck', 'tram', 'misc']:
+        types[i] = 'car'
+  #print(types)
+  
   example = tf.train.Example(features=tf.train.Features(feature={
       'image/height': dataset_util.int64_feature(height),
       'image/width': dataset_util.int64_feature(width),
       'image/filename': dataset_util.bytes_feature(image_path.encode('utf8')),
       'image/source_id': dataset_util.bytes_feature(image_path.encode('utf8')),
-      'image/key/sha256': dataset_util.bytes_feature(key.encode('utf8')),
+      #'image/key/sha256': dataset_util.bytes_feature(key.encode('utf8')),
       'image/encoded': dataset_util.bytes_feature(encoded_png),
       'image/format': dataset_util.bytes_feature('png'.encode('utf8')),
       'image/object/bbox/xmin': dataset_util.float_list_feature(xmin_norm),
@@ -182,28 +206,28 @@ def prepare_example(image_path, annotations, label_map_dict):
       'image/object/bbox/ymin': dataset_util.float_list_feature(ymin_norm),
       'image/object/bbox/ymax': dataset_util.float_list_feature(ymax_norm),
       'image/object/class/text': dataset_util.bytes_list_feature(
-          [x.encode('utf8') for x in annotations['type']]),
+          [x.encode('utf8') for x in types]),
       'image/object/class/label': dataset_util.int64_list_feature(
-          [label_map_dict[x] for x in annotations['type']]),
+          [label_map_dict[x] for x in types]),
       'image/object/difficult': dataset_util.int64_list_feature(difficult_obj),
       'image/object/truncated': dataset_util.float_list_feature(
           annotations['truncated']),
-      'image/object/alpha': dataset_util.float_list_feature(
-          annotations['alpha']),
-      'image/object/3d_bbox/height': dataset_util.float_list_feature(
-          annotations['3d_bbox_height']),
-      'image/object/3d_bbox/width': dataset_util.float_list_feature(
-          annotations['3d_bbox_width']),
-      'image/object/3d_bbox/length': dataset_util.float_list_feature(
-          annotations['3d_bbox_length']),
-      'image/object/3d_bbox/x': dataset_util.float_list_feature(
-          annotations['3d_bbox_x']),
-      'image/object/3d_bbox/y': dataset_util.float_list_feature(
-          annotations['3d_bbox_y']),
-      'image/object/3d_bbox/z': dataset_util.float_list_feature(
-          annotations['3d_bbox_z']),
-      'image/object/3d_bbox/rot_y': dataset_util.float_list_feature(
-          annotations['3d_bbox_rot_y']),
+      #'image/object/alpha': dataset_util.float_list_feature(
+      #    annotations['alpha']),
+      #'image/object/3d_bbox/height': dataset_util.float_list_feature(
+      #    annotations['3d_bbox_height']),
+      #'image/object/3d_bbox/width': dataset_util.float_list_feature(
+      #    annotations['3d_bbox_width']),
+      #'image/object/3d_bbox/length': dataset_util.float_list_feature(
+      #    annotations['3d_bbox_length']),
+      #'image/object/3d_bbox/x': dataset_util.float_list_feature(
+      #    annotations['3d_bbox_x']),
+      #'image/object/3d_bbox/y': dataset_util.float_list_feature(
+      #    annotations['3d_bbox_y']),
+      #'image/object/3d_bbox/z': dataset_util.float_list_feature(
+      #    annotations['3d_bbox_z']),
+      #'image/object/3d_bbox/rot_y': dataset_util.float_list_feature(
+      #    annotations['3d_bbox_rot_y']),
   }))
 
   return example
@@ -306,7 +330,7 @@ def main(_):
   convert_kitti_to_tfrecords(
       data_dir=FLAGS.data_dir,
       output_path=FLAGS.output_path,
-      classes_to_use=['car', 'pedestrian', 'dontcare'], #FLAGS.classes_to_use,
+      classes_to_use=['car', 'van', 'truck', 'tram', 'misc', 'pedestrian'], #FLAGS.classes_to_use,
       label_map_path=FLAGS.label_map_path,
       validation_set_size=FLAGS.validation_set_size)
 
