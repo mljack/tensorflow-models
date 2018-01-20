@@ -45,6 +45,7 @@ message LearningRate {
     ExponentialDecayLearningRate exponential_decay_learning_rate = 2;
     ManualStepLearningRate manual_step_learning_rate = 3;
     CosineDecayLearningRate cosine_decay_learning_rate = 4;
+    CyclicalLearningRate cyclical_learning_rate = 5;
   }
 }
 
@@ -80,4 +81,10 @@ message CosineDecayLearningRate {
   optional uint32 total_steps = 2 [default = 4000000];
   optional float warmup_learning_rate = 3 [default = 0.0002];
   optional uint32 warmup_steps = 4 [default = 10000];
+}
+
+message CyclicalLearningRate {
+  optional float learning_rate_min = 1 [default = 0.00001];
+  optional float learning_rate_max = 2 [default = 0.001];
+  optional uint32 cycle = 3 [default = 10000];
 }

@@ -112,6 +112,12 @@ def _create_learning_rate(learning_rate_config, global_summaries):
         config.warmup_learning_rate,
         config.warmup_steps)
 
+  if learning_rate_type == 'cyclical_learning_rate':
+    config = learning_rate_config.cyclical_learning_rate
+    gstep = tf.cast(tf.train.get_or_create_global_step(), tf.float32)
+    factor = (gstep - tf.floor(gstep/float(config.cycle))*float(config.cycle))/float(config.cycle)
+    learning_rate = config.learning_rate_min + (config.learning_rate_max - config.learning_rate_min)* (1 - tf.abs(factor*2-1))
+
   if learning_rate is None:
     raise ValueError('Learning_rate %s not supported.' % learning_rate_type)
 
