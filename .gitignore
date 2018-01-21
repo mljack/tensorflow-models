@@ -95,3 +95,4 @@ ENV/
 /research/object_detection/_logs
 /research/object_detection/kitti
 /research/object_detection/protos/*_pb2.py
+/research/object_detection/dataset_tools/kitti

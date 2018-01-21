@@ -111,6 +111,7 @@ def convert_kitti_to_tfrecords(data_dir, output_path, classes_to_use,
   label_map_dict = label_map_util.get_label_map_dict(label_map_path)
   train_count = 0
   val_count = 0
+  train_test_count = 0
 
   annotation_dir = os.path.join(data_dir,
                                 'training',
@@ -121,6 +122,8 @@ def convert_kitti_to_tfrecords(data_dir, output_path, classes_to_use,
                            'image_2')
 
   train_writer = tf.python_io.TFRecordWriter('%s_train.tfrecord'%
+                                             output_path)
+  train_test_writer = tf.python_io.TFRecordWriter('%s_traintest.tfrecord'%
                                              output_path)
   val_writer = tf.python_io.TFRecordWriter('%s_val.tfrecord'%
                                            output_path)
@@ -148,10 +151,17 @@ def convert_kitti_to_tfrecords(data_dir, output_path, classes_to_use,
       val_writer.write(example.SerializeToString())
       val_count += 1
     else:
+      if (train_count % 13) == 0 and train_test_count < 500:
+        train_test_writer.write(example.SerializeToString())
+        train_test_count += 1
       train_writer.write(example.SerializeToString())
       train_count += 1
+  print("val_count:",val_count)
+  print("train_count:",train_count)
+  print("train_test_count:",train_test_count)
 
   train_writer.close()
+  train_test_writer.close()
   val_writer.close()
 
 
