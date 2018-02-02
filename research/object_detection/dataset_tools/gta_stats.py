@@ -126,7 +126,12 @@ def main(_):
     H = H.T
     ax = fig.add_subplot(122, title='(w,h)')
     plt.imshow(H, interpolation='nearest', origin='low', extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]])
-    
+
+    print("mean w:",np.mean(w))
+    print(" var w:",np.var(w))
+    print("mean h:",np.mean(h))
+    print(" var h:",np.var(h))
+  
     plt.show()
 
 if __name__ == '__main__':
