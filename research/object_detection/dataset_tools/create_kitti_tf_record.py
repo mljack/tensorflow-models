@@ -49,6 +49,8 @@ from object_detection.utils import dataset_util
 from object_detection.utils import label_map_util
 from object_detection.utils.np_box_ops import iou
 
+tf.app.flags.DEFINE_string('difficulty', 'easy', 'filter samples in other difficulties.')
+
 tf.app.flags.DEFINE_string('data_dir', '', 'Location of root directory for the '
                            'data. Folder structure is assumed to be:'
                            '<data_dir>/training/label_2 (annotations) and'
@@ -86,7 +88,7 @@ item {
 '''
 
 
-def convert_kitti_to_tfrecords(data_dir, output_path, classes_to_use,
+def convert_kitti_to_tfrecords(difficulty, data_dir, output_path, classes_to_use,
                                label_map_path, validation_set_size):
   """Convert the KITTI detection dataset to TFRecords.
 
@@ -112,21 +114,26 @@ def convert_kitti_to_tfrecords(data_dir, output_path, classes_to_use,
   train_count = 0
   val_count = 0
   train_test_count = 0
+  total_count = 0
 
-  annotation_dir = os.path.join(data_dir,
-                                'training',
-                                'label_2')
 
-  image_dir = os.path.join(data_dir,
-                           'training',
-                           'image_2')
+  #annotation_dir = os.path.join(data_dir, 'training', 'label_2')
+  #image_dir = os.path.join(data_dir, 'training', 'image_2')
 
-  train_writer = tf.python_io.TFRecordWriter('%s_train.tfrecord'%
-                                             output_path)
-  train_test_writer = tf.python_io.TFRecordWriter('%s_traintest.tfrecord'%
-                                             output_path)
-  val_writer = tf.python_io.TFRecordWriter('%s_val.tfrecord'%
-                                           output_path)
+  annotation_dir = os.path.join(data_dir, 'training', 'label_2_'+difficulty)
+  image_dir = os.path.join(data_dir, 'training', 'image_2_'+difficulty)
+
+  #annotation_dir = os.path.join(data_dir, 'training', 'label_2_hard')
+  #image_dir = os.path.join(data_dir, 'training', 'image_2_hard')
+
+  #annotation_dir = os.path.join(data_dir, 'training', 'label_2_moderate')
+  #image_dir = os.path.join(data_dir, 'training', 'image_2_moderate')
+
+
+  #train_writer = tf.python_io.TFRecordWriter('%s_train.tfrecord' % output_path)
+  #train_test_writer = tf.python_io.TFRecordWriter('%s_traintest.tfrecord' % output_path)
+  #val_writer = tf.python_io.TFRecordWriter('%s_val.tfrecord' % output_path)
+  writer = tf.python_io.TFRecordWriter('%s.tfrecord' % output_path)
 
   images = sorted(tf.gfile.ListDirectory(image_dir))
   
@@ -147,22 +154,26 @@ def convert_kitti_to_tfrecords(data_dir, output_path, classes_to_use,
     annotation_for_image = filter_annotations(img_anno, classes_to_use)
 
     example = prepare_example(image_path, annotation_for_image, label_map_dict)
-    if is_validation_img:
-      val_writer.write(example.SerializeToString())
-      val_count += 1
-    else:
-      if (train_count % 13) == 0 and train_test_count < 500:
-        train_test_writer.write(example.SerializeToString())
-        train_test_count += 1
-      train_writer.write(example.SerializeToString())
-      train_count += 1
-  print("val_count:",val_count)
-  print("train_count:",train_count)
-  print("train_test_count:",train_test_count)
+    writer.write(example.SerializeToString())
+    total_count += 1
+    #if is_validation_img:
+    #  val_writer.write(example.SerializeToString())
+    #  val_count += 1
+    #else:
+    #  if (train_count % 13) == 0 and train_test_count < 500:
+    #    train_test_writer.write(example.SerializeToString())
+    #    train_test_count += 1
+    #  train_writer.write(example.SerializeToString())
+    #  train_count += 1
+  #print("val_count:",val_count)
+  #print("train_count:",train_count)
+  #print("train_test_count:",train_test_count)
+  print("total_count:",total_count)
 
-  train_writer.close()
-  train_test_writer.close()
-  val_writer.close()
+  #train_writer.close()
+  #train_test_writer.close()
+  #val_writer.close()
+  writer.close()
 
 
 def prepare_example(image_path, annotations, label_map_dict):
@@ -338,6 +349,7 @@ def read_annotation_file(filename):
 
 def main(_):
   convert_kitti_to_tfrecords(
+      difficulty=FLAGS.difficulty,
       data_dir=FLAGS.data_dir,
       output_path=FLAGS.output_path,
       classes_to_use=['car', 'van', 'truck', 'tram', 'misc', 'pedestrian'], #FLAGS.classes_to_use,
