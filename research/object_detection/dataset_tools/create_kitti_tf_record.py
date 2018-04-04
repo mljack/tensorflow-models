@@ -117,11 +117,11 @@ def convert_kitti_to_tfrecords(difficulty, data_dir, output_path, classes_to_use
   total_count = 0
 
 
-  #annotation_dir = os.path.join(data_dir, 'training', 'label_2')
-  #image_dir = os.path.join(data_dir, 'training', 'image_2')
+  annotation_dir = os.path.join(data_dir, 'training', 'label_2')
+  image_dir = os.path.join(data_dir, 'training', 'image_2')
 
-  annotation_dir = os.path.join(data_dir, 'training', 'label_2_'+difficulty)
-  image_dir = os.path.join(data_dir, 'training', 'image_2_'+difficulty)
+  #annotation_dir = os.path.join(data_dir, 'training', 'label_2_'+difficulty)
+  #image_dir = os.path.join(data_dir, 'training', 'image_2_'+difficulty)
 
   #annotation_dir = os.path.join(data_dir, 'training', 'label_2_hard')
   #image_dir = os.path.join(data_dir, 'training', 'image_2_hard')

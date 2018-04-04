@@ -76,6 +76,11 @@ flags.DEFINE_string('model_config_path', '',
 flags.DEFINE_boolean('run_once', False, 'Option to only run a single pass of '
                      'evaluation. Overrides the `max_evals` parameter in the '
                      'provided config.')
+flags.DEFINE_string('checkpoint', '', 'the checkpoint to evaluate')
+flags.DEFINE_boolean('export_all_results', False, 'export all to kitti results.')
+flags.DEFINE_boolean('want_kitti_summary', False, 'show kitti testing result in tensorboard.')
+flags.DEFINE_string('export_suffix', '', 'kitti result suffix')
+
 FLAGS = flags.FLAGS
 
 
@@ -123,7 +128,8 @@ def main(unused_argv):
     eval_config.max_evals = 1
 
   evaluator.evaluate(create_input_dict_fn, model_fn, eval_config, categories,
-                     FLAGS.checkpoint_dir, FLAGS.eval_dir)
+                     FLAGS.checkpoint_dir, FLAGS.eval_dir, FLAGS.checkpoint,
+                     FLAGS.export_all_results, FLAGS.want_kitti_summary, FLAGS.export_suffix)
 
 
 if __name__ == '__main__':

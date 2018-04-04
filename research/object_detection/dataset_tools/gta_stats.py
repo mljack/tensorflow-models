@@ -97,7 +97,8 @@ def main(_):
 
       width = 1914
       height = 1052
-      
+      print(count)
+
       for obj in data['object']:
         xmin = int(obj['bndbox']['xmin'])
         xmax = int(obj['bndbox']['xmax'])

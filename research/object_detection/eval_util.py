@@ -16,6 +16,7 @@
 import logging
 import os
 import time
+import subprocess
 
 import numpy as np
 import tensorflow as tf
@@ -31,7 +32,7 @@ from object_detection.utils import visualization_utils as vis_utils
 slim = tf.contrib.slim
 
 
-def write_metrics(metrics, global_step, summary_dir):
+def write_metrics(metrics, kitti_summary, global_step, summary_dir):
   """Write metrics to a summary directory.
 
   Args:
@@ -41,6 +42,15 @@ def write_metrics(metrics, global_step, summary_dir):
   """
   logging.info('Writing metrics to tf summary.')
   summary_writer = tf.summary.FileWriter(summary_dir)
+
+  
+  # mljack: for kitti
+  category = ["1_easy", "2_moderate", "3_hard"]
+  for (i,s) in enumerate(kitti_summary):
+    writer = tf.summary.FileWriter(os.path.join(summary_dir, category[i]))
+    writer.add_summary(s, global_step)
+    writer.close()
+
   for key in sorted(metrics):
     summary = tf.Summary(value=[
         tf.Summary.Value(tag=key, simple_value=metrics[key]),
@@ -178,7 +188,11 @@ def _run_checkpoint_once(tensor_dict,
                          master='',
                          save_graph=False,
                          save_graph_dir='',
-                         model_path=None):
+                         model_path=None,
+                         export_all_results=False,
+                         want_kitti_summary=False,
+                         export_suffix=''):
+
   """Evaluates metrics defined in evaluators.
 
   This function loads the latest checkpoint in checkpoint_dirs and evaluates
@@ -254,6 +268,8 @@ def _run_checkpoint_once(tensor_dict,
   if save_graph:
     tf.train.write_graph(sess.graph_def, save_graph_dir, 'eval.pbtxt')
 
+  if want_kitti_summary:
+    os.system("rm /home/me/tensorflow/models/research/object_detection/kitti/training/label_2_test_tmp/*.txt")
   counters = {'skipped': 0, 'success': 0}
   with tf.contrib.slim.queues.QueueRunners(sess):
     try:
@@ -270,6 +286,47 @@ def _run_checkpoint_once(tensor_dict,
             result_dict = {}
         else:
           result_dict = batch_processor(tensor_dict, sess, batch, counters)
+
+        if export_all_results or want_kitti_summary:
+            import cv2
+            filename = result_dict["key"].decode()
+            #print(filename)
+            m = cv2.imread(filename)
+            c = [0,255,0]
+            w = 1
+            is_empty = True
+            if want_kitti_summary:
+                filename = filename.replace("image_2","label_2_test_tmp").replace(".png", ".txt")
+            else:
+                filename = filename.replace("image_2","label_2_test_"+export_suffix).replace(".png", ".txt")
+            base = os.path.split(filename)
+            if not os.path.isdir(base[0]):
+                os.mkdir(base[0])
+            with open(filename, "w") as f:
+                for (i,b) in enumerate(result_dict["detection_boxes"]):
+                    score = result_dict["detection_scores"][i];
+                    #print(b)
+                    if score is None or score > 0.5:
+                        if not is_empty:
+                            f.write("\n")
+                        is_empty = False
+                        type = result_dict["detection_classes"][i]-1
+                        if type != 0:
+                            continue
+                        f.write("%s %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f" %
+                                   (
+                                       "Car",
+                                       0.0, 0.0, 1.0,
+                                       b[1], b[0], b[3], b[2],
+                                       0, 0, 0, 0, 0, 0, 0, result_dict["detection_scores"][i]
+                                   )
+                               )
+                        #cv2.rectangle(m,(int(b[1]),int(b[0])),(int(b[3]),int(b[2])),c,w) 
+            #cv2.imshow("input", m)
+            #k = cv2.waitKey()
+            #if k == 27:
+            #    exit(0)
+
         for evaluator in evaluators:
           # TODO: Use image_id tensor once we fix the input data
           # decoders to return correct image_id.
@@ -286,6 +343,21 @@ def _run_checkpoint_once(tensor_dict,
       # When done, ask the threads to stop.
       logging.info('# success: %d', counters['success'])
       logging.info('# skipped: %d', counters['skipped'])
+
+      # read kitti results and write them into summary
+      os.system("/home/me/kitti-eval/cpp/evaluate_object")
+      mAPs = []
+      with open("/home/me/tensorflow/models/research/object_detection/kitti/training/label_2_test_tmp/stats_car_mAP.txt") as f:
+          mAPs = f.readlines()
+      #print(mAPs)
+
+      kitti_summary = [
+          tf.Summary(value=[tf.Summary.Value(tag="mAP", simple_value=float(mAPs[0]))]), # easy
+          tf.Summary(value=[tf.Summary.Value(tag="mAP", simple_value=float(mAPs[1]))]), # moderate
+          tf.Summary(value=[tf.Summary.Value(tag="mAP", simple_value=float(mAPs[2]))])  # hard
+          ]
+          
+
       all_evaluator_metrics = {}
       for evaluator in evaluators:
         metrics = evaluator.evaluate()
@@ -295,7 +367,7 @@ def _run_checkpoint_once(tensor_dict,
         all_evaluator_metrics.update(metrics)
       global_step = tf.train.global_step(sess, tf.train.get_global_step())
   sess.close()
-  return (global_step, all_evaluator_metrics)
+  return (global_step, all_evaluator_metrics, kitti_summary)
 
 
 # TODO: Add tests.
@@ -311,7 +383,11 @@ def repeated_checkpoint_run(tensor_dict,
                             max_number_of_evaluations=None,
                             master='',
                             save_graph=False,
-                            save_graph_dir=''):
+                            save_graph_dir='',
+                            export_all_results=False,
+                            want_kitti_summary=False,
+                            export_suffix="",
+                            checkpoint=""):
   """Periodically evaluates desired tensors using checkpoint_dirs or restore_fn.
 
   This function repeatedly loads a checkpoint and evaluates a desired
@@ -371,6 +447,7 @@ def repeated_checkpoint_run(tensor_dict,
   number_of_evaluations = 0
   
   def get_checkpoint_list(path):
+    '''
     list = []
     p = os.path.join(path, "checkpoint")
     if os.path.isfile(p):
@@ -380,7 +457,15 @@ def repeated_checkpoint_run(tensor_dict,
                 list = lines[1:]
                 for i,line in enumerate(list):
                     list[i] = line.replace('all_model_checkpoint_paths: "', '').replace('"\n', '')
+
+                # only want latest checkpoint
+                #list = [list[-1]]
+                #list = ["model.ckpt-400000"]
+                #list = ["model.ckpt-726604"]
+
             f.close()
+    '''
+    list = subprocess.check_output(["bash", "/home/me/tensorflow/models/research/object_detection/list-checkpoints.sh", path]).decode("utf8").split("\n")[:-1]
     return list
   def get_last_evaluated_checkpoint(path):
     s = None
@@ -409,7 +494,11 @@ def repeated_checkpoint_run(tensor_dict,
     logging.info('Starting evaluation at ' + time.strftime(
         '%Y-%m-%d-%H:%M:%S', time.localtime()))
     #model_path = tf.train.latest_checkpoint(checkpoint_dirs[0])
-    list = get_checkpoint_list(checkpoint_dirs[0])
+    if len(checkpoint) > 0:
+        list = ["model.ckpt-%s" % checkpoint]
+    else:
+        list = get_checkpoint_list(checkpoint_dirs[0])
+    #print(list) 
     last_evaluated = get_last_evaluated_checkpoint(summary_dir)
     model_path = None
     if (len(list) > 0):
@@ -441,14 +530,18 @@ def repeated_checkpoint_run(tensor_dict,
       print("============== "+'Found new checkpoint.' + model_path)
       last_evaluated_model_path = model_path
 
-      global_step, metrics = _run_checkpoint_once(tensor_dict, evaluators,
+      global_step, metrics, kitti_summary = _run_checkpoint_once(tensor_dict, evaluators,
                                                   batch_processor,
                                                   checkpoint_dirs,
                                                   variables_to_restore,
                                                   restore_fn, num_batches,
                                                   master, save_graph,
-                                                  save_graph_dir, model_path)
-      write_metrics(metrics, global_step, summary_dir)
+                                                  save_graph_dir, model_path,
+                                                  export_all_results,
+                                                  want_kitti_summary,
+                                                  export_suffix)
+      if not export_all_results:
+          write_metrics(metrics, kitti_summary, global_step, summary_dir)
       
       with open(os.path.join(summary_dir, "checkpoint-evaluated"), "a") as f:
         f.write(to_evaluate+"\n")
@@ -464,6 +557,7 @@ def repeated_checkpoint_run(tensor_dict,
     if time_to_next_eval > 0:
       print("============== Sleep "+str(int(time_to_next_eval+0.5))+"s")
       time.sleep(time_to_next_eval)
+    break # mljack tmp workaround for memory leak
 
   return metrics
 
